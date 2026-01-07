@@ -2,13 +2,10 @@
 
 pkgs.mkShell {
   buildInputs = with pkgs; [
-    go
-    gopls
-    gotools
-    go-outline
+    go_1_24
   ];
 
   shellHook = ''
-    echo "Go development environment loaded"
+    echo "Go 1.24 environment loaded"
   '';
 }
