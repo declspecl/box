@@ -1,0 +1,154 @@
+---
+- name: Deploy Deno Services
+  hosts: servers
+  become: yes
+  vars:
+    services_dir: /opt/box/services
+    deno_install_dir: /usr/local/bin
+    box_user: "{{ ansible_user }}"
+
+  tasks:
+    - name: Check if Deno is installed
+      stat:
+        path: "{{ deno_install_dir }}/deno"
+      register: deno_binary
+
+    - name: Install Deno
+      shell: |
+        curl -fsSL https://deno.land/install.sh | sh -s -- --yes
+        cp ~/.deno/bin/deno {{ deno_install_dir }}/deno
+      when: not deno_binary.stat.exists
+
+    - name: Verify Deno installation
+      command: "{{ deno_install_dir }}/deno --version"
+      register: deno_version
+      changed_when: false
+
+    - name: Display Deno version
+      debug:
+        var: deno_version.stdout_lines
+
+    - name: Create services directory
+      file:
+        path: "{{ services_dir }}"
+        state: directory
+        owner: "{{ box_user }}"
+        group: "{{ box_user }}"
+        mode: "0755"
+
+    - name: Copy hello-world service
+      synchronize:
+        src: "{{ playbook_dir }}/../../services/hello-world/"
+        dest: "{{ services_dir }}/hello-world/"
+        rsync_opts:
+          - "--exclude=node_modules"
+          - "--exclude=.env"
+          - "--exclude=deno.lock"
+      notify: restart hello-world
+
+    - name: Create hello-world systemd service
+      copy:
+        dest: /etc/systemd/system/hello-world.service
+        content: |
+          [Unit]
+          Description=Hello World Deno Service
+          After=network.target
+
+          [Service]
+          Type=simple
+          User={{ box_user }}
+          WorkingDirectory={{ services_dir }}/hello-world
+          ExecStart={{ deno_install_dir }}/deno run --allow-net --allow-read --allow-env src/main.ts
+          Restart=on-failure
+          RestartSec=5
+          Environment="PORT=8080"
+
+          [Install]
+          WantedBy=multi-user.target
+        mode: "0644"
+      notify: restart hello-world
+
+    - name: Enable and start hello-world service
+      systemd:
+        name: hello-world
+        enabled: yes
+        state: started
+        daemon_reload: yes
+
+    - name: Copy box-dns-updater service
+      synchronize:
+        src: "{{ playbook_dir }}/../../services/box-dns-updater/"
+        dest: "{{ services_dir }}/box-dns-updater/"
+        rsync_opts:
+          - "--exclude=node_modules"
+          - "--exclude=.env"
+          - "--exclude=deno.lock"
+
+    - name: Create box-dns-updater environment file
+      copy:
+        dest: "{{ services_dir }}/box-dns-updater/.env"
+        content: |
+          AWS_ACCESS_KEY_ID={{ aws_access_key_id }}
+          AWS_SECRET_ACCESS_KEY={{ aws_secret_access_key }}
+          AWS_HOSTED_ZONE_ID={{ aws_hosted_zone_id }}
+        owner: "{{ box_user }}"
+        group: "{{ box_user }}"
+        mode: "0600"
+      when: aws_access_key_id is defined and aws_secret_access_key is defined and aws_hosted_zone_id is defined
+      no_log: true
+
+    - name: Create box-dns-updater systemd service (for manual runs)
+      copy:
+        dest: /etc/systemd/system/box-dns-updater.service
+        content: |
+          [Unit]
+          Description=Box DNS Updater - Updates Route53 A record with current public IP
+          After=network-online.target
+          Wants=network-online.target
+
+          [Service]
+          Type=oneshot
+          User={{ box_user }}
+          WorkingDirectory={{ services_dir }}/box-dns-updater
+          ExecStart={{ deno_install_dir }}/deno run --allow-net --allow-env --allow-read --allow-sys --env-file src/main.ts
+          EnvironmentFile={{ services_dir }}/box-dns-updater/.env
+
+          [Install]
+          WantedBy=multi-user.target
+        mode: "0644"
+
+    - name: Create box-dns-updater timer (runs every 5 minutes)
+      copy:
+        dest: /etc/systemd/system/box-dns-updater.timer
+        content: |
+          [Unit]
+          Description=Run Box DNS Updater every 5 minutes
+
+          [Timer]
+          OnBootSec=1min
+          OnUnitActiveSec=5min
+          Unit=box-dns-updater.service
+
+          [Install]
+          WantedBy=timers.target
+        mode: "0644"
+
+    - name: Enable and start box-dns-updater timer
+      systemd:
+        name: box-dns-updater.timer
+        enabled: yes
+        state: started
+        daemon_reload: yes
+
+    - name: Run box-dns-updater once on deploy
+      systemd:
+        name: box-dns-updater.service
+        state: started
+      when: aws_access_key_id is defined
+
+  handlers:
+    - name: restart hello-world
+      systemd:
+        name: hello-world
+        state: restarted
+        daemon_reload: yes

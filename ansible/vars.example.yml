@@ -1,0 +1,7 @@
+# Box DNS Updater AWS Credentials
+# Copy this file to vars.yml and fill in your values
+# NEVER commit vars.yml to version control!
+
+aws_access_key_id: "YOUR_AWS_ACCESS_KEY_ID"
+aws_secret_access_key: "YOUR_AWS_SECRET_ACCESS_KEY"
+aws_hosted_zone_id: "YOUR_HOSTED_ZONE_ID"

@@ -3,3 +3,6 @@
 !.env.development
 
 node_modules
+
+ansible/vars.yml
+ansible/vault.yml
