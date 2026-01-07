@@ -1,41 +1,6 @@
-import { ChangeResourceRecordSetsCommand, Route53Client } from "@aws-sdk/client-route-53";
-
-const CHECK_IP_URL = "https://checkip.amazonaws.com/";
-const SUBDOMAIN_A_RECORD_NAME = "box.gavindhondt.com";
-const DNS_RECORD_TTL_SECONDS = 3600;
-
-async function getPublicIp(): Promise<string> {
-    const response = await fetch(CHECK_IP_URL);
-    if (!response.ok) {
-        throw new Error(`Failed to fetch IP: ${response.status}`);
-    }
-
-    return (await response.text()).trim();
-}
-
-async function updateSubdomainARecord(hostedZoneId: string, ip: string): Promise<void> {
-    const client = new Route53Client({ region: "us-east-1" });
-
-    const command = new ChangeResourceRecordSetsCommand({
-        HostedZoneId: hostedZoneId,
-        ChangeBatch: {
-            Comment: "Automatic DNS update from box-dns-updater",
-            Changes: [
-                {
-                    Action: "UPSERT",
-                    ResourceRecordSet: {
-                        Name: SUBDOMAIN_A_RECORD_NAME,
-                        Type: "A",
-                        TTL: DNS_RECORD_TTL_SECONDS,
-                        ResourceRecords: [{ Value: ip }],
-                    },
-                },
-            ],
-        },
-    });
-
-    await client.send(command);
-}
+import { SUBDOMAIN_A_RECORD_NAME } from "./constants.ts";
+import { updateSubdomainARecord } from "./dns.ts";
+import { fetchPublicIp } from "./net.ts";
 
 async function main() {
     const awsAccessKeyId = Deno.env.get("AWS_ACCESS_KEY_ID");
@@ -47,7 +12,7 @@ async function main() {
         Deno.exit(1);
     }
 
-    const publicIp = await getPublicIp();
+    const publicIp = await fetchPublicIp();
     console.log(`Current public IP: ${publicIp}`);
 
     await updateSubdomainARecord(hostedZoneId, publicIp);

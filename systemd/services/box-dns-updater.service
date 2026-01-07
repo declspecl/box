@@ -6,7 +6,7 @@ Wants=network-online.target
 [Service]
 Type=oneshot
 WorkingDirectory=/etc/box/services/box-dns-updater
-ExecStart=/nix/var/nix/profiles/default/bin/nix develop /etc/box/nix#deno --command deno run --allow-net --allow-env --allow-read --env-file src/main.ts
+ExecStart=/nix/var/nix/profiles/default/bin/nix develop /etc/box/nix#deno --command deno run --allow-sys --allow-net --allow-env --allow-read --env-file src/main.ts
 
 NoNewPrivileges=true
 ProtectSystem=strict
