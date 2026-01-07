@@ -1,4 +1,4 @@
-import { SUBDOMAIN_A_RECORD_NAME, DNS_RECORD_TTL_SECONDS } from "./constants.ts";
+import { DNS_RECORD_TTL_SECONDS, SUBDOMAIN_A_RECORD_NAME } from "./constants.ts";
 import { ChangeResourceRecordSetsCommand, Route53Client } from "@aws-sdk/client-route-53";
 
 export async function updateSubdomainARecord(hostedZoneId: string, ip: string) {

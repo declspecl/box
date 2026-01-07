@@ -1,0 +1,15 @@
+{
+    "tasks": {
+        "dev": "deno run --allow-net --allow-read --allow-env --watch src/main.ts",
+        "serve": "deno run --allow-net --allow-read --allow-env src/main.ts"
+    },
+    "fmt": {
+        "indentWidth": 4,
+        "lineWidth": 140,
+        "semiColons": true,
+        "singleQuote": false
+    },
+    "imports": {
+        "@std/http": "jsr:@std/http@^1.0.23"
+    }
+}

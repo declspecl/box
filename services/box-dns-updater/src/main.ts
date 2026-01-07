@@ -8,7 +8,9 @@ async function main() {
     const hostedZoneId = Deno.env.get("AWS_HOSTED_ZONE_ID");
 
     if (!awsAccessKeyId || !awsSecretAccessKey || !hostedZoneId) {
-        console.error("Missing required environment variables: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_HOSTED_ZONE_ID");
+        console.error(
+            "Missing required environment variables: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_HOSTED_ZONE_ID",
+        );
         Deno.exit(1);
     }
 
@@ -16,7 +18,9 @@ async function main() {
     console.log(`Current public IP: ${publicIp}`);
 
     await updateSubdomainARecord(hostedZoneId, publicIp);
-    console.log(`Successfully updated A record ${SUBDOMAIN_A_RECORD_NAME} to ${publicIp}`);
+    console.log(
+        `Successfully updated A record ${SUBDOMAIN_A_RECORD_NAME} to ${publicIp}`,
+    );
 }
 
 main();

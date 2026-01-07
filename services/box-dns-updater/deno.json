@@ -1,5 +1,15 @@
 {
-    "compilerOptions": {
-        "lib": ["deno.window"]
+    "tasks": {
+        "run": "deno run --allow-net --allow-env --allow-read --allow-sys --env-file src/main.ts"
+    },
+    "fmt": {
+        "indentWidth": 4,
+        "lineWidth": 140,
+        "semiColons": true,
+        "singleQuote": false
+    },
+    "imports": {
+        "@aws-sdk/client-route-53": "npm:@aws-sdk/client-route-53@^3.964.0",
+        "@types/deno": "npm:@types/deno@^2.5.0"
     }
 }
