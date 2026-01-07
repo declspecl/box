@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -21,10 +22,10 @@ const (
 	checkIpUrl   = "https://checkip.amazonaws.com/"
 	recordName   = "box.gavindhondt.com"
 	dnsRecordTtl = 3600
-	envFilePath  = "/etc/box/services/box-dns-updater/.env"
 )
 
 func main() {
+	envFilePath, _ := filepath.Abs(".env")
 	if err := godotenv.Load(envFilePath); err != nil {
 		log.Printf("Warning: Could not load %s: %v", envFilePath, err)
 		log.Println("Falling back to environment variables")
