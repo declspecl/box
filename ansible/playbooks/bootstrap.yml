@@ -1,0 +1,46 @@
+---
+- name: Bootstrap Ubuntu Server
+  hosts: servers
+  become: yes
+  tasks:
+    - name: Install essential packages
+      apt:
+        name:
+          - curl
+          - git
+          - vim
+          - build-essential
+          - xz-utils
+        state: present
+        update_cache: yes
+
+    - name: Check if Nix is installed
+      stat:
+        path: /nix
+      register: nix_path
+
+    - name: Install Nix
+      shell: sh <(curl --proto '=https' --tlsv1.2 -L https://nixos.org/nix/install) --daemon
+      when: not nix_path.stat.exists
+
+    - name: Ensure SSH is hardened
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: "{{ item.regexp }}"
+        line: "{{ item.line }}"
+      with_items:
+        - {
+            regexp: "^PasswordAuthentication",
+            line: "PasswordAuthentication no",
+          }
+        - {
+            regexp: "^PermitRootLogin",
+            line: "PermitRootLogin prohibit-password",
+          }
+      notify: restart ssh
+
+  handlers:
+    - name: restart ssh
+      service:
+        name: ssh
+        state: restarted
