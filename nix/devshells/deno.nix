@@ -2,10 +2,10 @@
 
 pkgs.mkShell {
   buildInputs = with pkgs; [
-    go_1_24
+    deno
   ];
 
   shellHook = ''
-    echo "Go 1.24 environment loaded"
+    echo "Deno environment loaded"
   '';
 }

@@ -11,7 +11,7 @@
       in
       {
         devShells = {
-          go = import ./devshells/go.nix { inherit pkgs; };
+          deno = import ./devshells/deno.nix { inherit pkgs; };
           default = pkgs.mkShell {
             buildInputs = with pkgs; [
               ansible
