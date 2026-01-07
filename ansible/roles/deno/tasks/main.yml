@@ -1,0 +1,20 @@
+---
+- name: Check if Deno is installed
+  stat:
+    path: "{{ deno_install_dir }}/deno"
+  register: deno_binary
+
+- name: Install Deno
+  shell: |
+    curl -fsSL https://deno.land/install.sh | sh -s -- --yes
+    cp ~/.deno/bin/deno {{ deno_install_dir }}/deno
+  when: not deno_binary.stat.exists
+
+- name: Verify Deno installation
+  command: "{{ deno_install_dir }}/deno --version"
+  register: deno_version
+  changed_when: false
+
+- name: Display Deno version
+  debug:
+    var: deno_version.stdout_lines

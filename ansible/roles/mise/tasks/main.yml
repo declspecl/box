@@ -1,0 +1,24 @@
+---
+- name: Check if mise is installed
+  stat:
+    path: "{{ mise_install_dir }}/mise"
+  register: mise_binary
+
+- name: Install mise
+  shell: |
+    curl https://mise.run | sh
+    cp ~/.local/bin/mise {{ mise_install_dir }}/mise
+  when: not mise_binary.stat.exists
+
+- name: Verify mise installation
+  command: "{{ mise_install_dir }}/mise --version"
+  register: mise_version
+  changed_when: false
+
+- name: Display mise version
+  debug:
+    var: mise_version.stdout_lines
+
+- name: Trust mise config globally
+  command: "{{ mise_install_dir }}/mise trust --all"
+  changed_when: false

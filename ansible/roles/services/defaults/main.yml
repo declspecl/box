@@ -1,0 +1,4 @@
+---
+services_dir: /opt/box/services
+mise_install_dir: /usr/local/bin
+box_user: "{{ ansible_user }}"

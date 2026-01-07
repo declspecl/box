@@ -1,0 +1,45 @@
+---
+- name: Copy hello-world service
+  synchronize:
+    src: "{{ role_path }}/../../../services/hello-world/"
+    dest: "{{ services_dir }}/hello-world/"
+    rsync_opts:
+      - "--exclude=node_modules"
+      - "--exclude=.env"
+      - "--exclude=deno.lock"
+  notify: restart hello-world
+
+- name: Install hello-world dependencies via mise
+  command: "{{ mise_install_dir }}/mise install"
+  args:
+    chdir: "{{ services_dir }}/hello-world"
+  changed_when: false
+
+- name: Create hello-world systemd service
+  copy:
+    dest: /etc/systemd/system/hello-world.service
+    content: |
+      [Unit]
+      Description=Hello World Deno Service
+      After=network.target
+
+      [Service]
+      Type=simple
+      User={{ box_user }}
+      WorkingDirectory={{ services_dir }}/hello-world
+      ExecStart={{ mise_install_dir }}/mise exec -- deno task serve
+      Restart=on-failure
+      RestartSec=5
+      Environment="PORT=8080"
+
+      [Install]
+      WantedBy=multi-user.target
+    mode: "0644"
+  notify: restart hello-world
+
+- name: Enable and start hello-world service
+  systemd:
+    name: hello-world
+    enabled: yes
+    state: started
+    daemon_reload: yes

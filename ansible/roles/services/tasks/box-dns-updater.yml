@@ -1,0 +1,77 @@
+---
+- name: Copy box-dns-updater service
+  synchronize:
+    src: "{{ role_path }}/../../../services/box-dns-updater/"
+    dest: "{{ services_dir }}/box-dns-updater/"
+    rsync_opts:
+      - "--exclude=node_modules"
+      - "--exclude=.env"
+      - "--exclude=deno.lock"
+
+- name: Install box-dns-updater dependencies via mise
+  command: "{{ mise_install_dir }}/mise install"
+  args:
+    chdir: "{{ services_dir }}/box-dns-updater"
+  changed_when: false
+
+- name: Create box-dns-updater environment file
+  copy:
+    dest: "{{ services_dir }}/box-dns-updater/.env"
+    content: |
+      AWS_ACCESS_KEY_ID={{ box_dns_updater_aws_access_key_id }}
+      AWS_SECRET_ACCESS_KEY={{ box_dns_updater_aws_secret_access_key }}
+      AWS_HOSTED_ZONE_ID={{ box_dns_updater_aws_hosted_zone_id }}
+    owner: "{{ box_user }}"
+    group: "{{ box_user }}"
+    mode: "0600"
+  when: box_dns_updater_aws_access_key_id is defined and box_dns_updater_aws_secret_access_key is defined and box_dns_updater_aws_hosted_zone_id is defined
+  no_log: true
+
+- name: Create box-dns-updater systemd service
+  copy:
+    dest: /etc/systemd/system/box-dns-updater.service
+    content: |
+      [Unit]
+      Description=Box DNS Updater - Updates Route53 A record with current public IP
+      After=network-online.target
+      Wants=network-online.target
+
+      [Service]
+      Type=oneshot
+      User={{ box_user }}
+      WorkingDirectory={{ services_dir }}/box-dns-updater
+      ExecStart={{ mise_install_dir }}/mise exec -- deno task run
+      EnvironmentFile={{ services_dir }}/box-dns-updater/.env
+
+      [Install]
+      WantedBy=multi-user.target
+    mode: "0644"
+
+- name: Create box-dns-updater timer
+  copy:
+    dest: /etc/systemd/system/box-dns-updater.timer
+    content: |
+      [Unit]
+      Description=Run Box DNS Updater every 5 minutes
+
+      [Timer]
+      OnBootSec=1min
+      OnUnitActiveSec=5min
+      Unit=box-dns-updater.service
+
+      [Install]
+      WantedBy=timers.target
+    mode: "0644"
+
+- name: Enable and start box-dns-updater timer
+  systemd:
+    name: box-dns-updater.timer
+    enabled: yes
+    state: started
+    daemon_reload: yes
+
+- name: Run box-dns-updater once on deploy
+  systemd:
+    name: box-dns-updater.service
+    state: started
+  when: box_dns_updater_aws_access_key_id is defined

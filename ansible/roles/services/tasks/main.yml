@@ -1,0 +1,14 @@
+---
+- name: Create services directory
+  file:
+    path: "{{ services_dir }}"
+    state: directory
+    owner: "{{ box_user }}"
+    group: "{{ box_user }}"
+    mode: "0755"
+
+- name: Deploy hello-world
+  include_tasks: hello-world.yml
+
+- name: Deploy box-dns-updater
+  include_tasks: box-dns-updater.yml
