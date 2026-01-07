@@ -11,6 +11,7 @@
           - vim
           - build-essential
           - xz-utils
+          - fail2ban
         state: present
         update_cache: yes
 
@@ -29,18 +30,39 @@
         regexp: "{{ item.regexp }}"
         line: "{{ item.line }}"
       with_items:
-        - {
-            regexp: "^PasswordAuthentication",
-            line: "PasswordAuthentication no",
-          }
-        - {
-            regexp: "^PermitRootLogin",
-            line: "PermitRootLogin prohibit-password",
-          }
+        - { regexp: "^#?PasswordAuthentication", line: "PasswordAuthentication no" }
+        - { regexp: "^#?PermitRootLogin", line: "PermitRootLogin prohibit-password" }
+        - { regexp: "^#?PubkeyAuthentication", line: "PubkeyAuthentication yes" }
       notify: restart ssh
+
+    - name: Configure fail2ban SSH jail
+      copy:
+        dest: /etc/fail2ban/jail.local
+        content: |
+          [sshd]
+          enabled = true
+          port = ssh
+          filter = sshd
+          logpath = /var/log/auth.log
+          maxretry = 3
+          bantime = 3600
+          findtime = 600
+        mode: "0644"
+      notify: restart fail2ban
+
+    - name: Ensure fail2ban is enabled and running
+      service:
+        name: fail2ban
+        state: started
+        enabled: yes
 
   handlers:
     - name: restart ssh
       service:
         name: ssh
+        state: restarted
+
+    - name: restart fail2ban
+      service:
+        name: fail2ban
         state: restarted
