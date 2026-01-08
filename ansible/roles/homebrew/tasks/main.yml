@@ -1,0 +1,97 @@
+---
+- name: Install Homebrew dependencies
+  apt:
+    name:
+      - build-essential
+      - procps
+      - curl
+      - file
+      - git
+    state: present
+
+- name: Check if Homebrew is installed
+  stat:
+    path: /home/linuxbrew/.linuxbrew/bin/brew
+  register: brew_installed
+
+- name: Create linuxbrew group
+  group:
+    name: linuxbrew
+    state: present
+
+- name: Add users to linuxbrew group
+  user:
+    name: "{{ item }}"
+    groups: linuxbrew
+    append: yes
+  loop:
+    - dec
+    - gavin
+    - gia
+    - antosakh
+
+- name: Create Homebrew directory
+  file:
+    path: /home/linuxbrew
+    state: directory
+    owner: dec
+    group: linuxbrew
+    mode: "0775"
+  when: not brew_installed.stat.exists
+
+- name: Download Homebrew installer
+  get_url:
+    url: https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh
+    dest: /tmp/brew-install.sh
+    mode: "0755"
+  when: not brew_installed.stat.exists
+
+- name: Install Homebrew
+  become_user: dec
+  shell: |
+    NONINTERACTIVE=1 /bin/bash /tmp/brew-install.sh
+  args:
+    creates: /home/linuxbrew/.linuxbrew/bin/brew
+  environment:
+    HOME: /home/dec
+  when: not brew_installed.stat.exists
+
+- name: Set Homebrew directory permissions for group access
+  file:
+    path: /home/linuxbrew/.linuxbrew
+    state: directory
+    owner: dec
+    group: linuxbrew
+    mode: "0775"
+    recurse: yes
+  when: not brew_installed.stat.exists
+
+- name: Add Homebrew to system-wide profile
+  copy:
+    dest: /etc/profile.d/homebrew.sh
+    content: |
+      # Homebrew (Linuxbrew)
+      if [ -d "/home/linuxbrew/.linuxbrew" ]; then
+          eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+      fi
+    mode: "0644"
+
+- name: Clean up installer
+  file:
+    path: /tmp/brew-install.sh
+    state: absent
+
+- name: Install default Homebrew packages
+  become_user: dec
+  command: /home/linuxbrew/.linuxbrew/bin/brew install {{ item }}
+  args:
+    creates: /home/linuxbrew/.linuxbrew/bin/{{ item }}
+  environment:
+    HOME: /home/dec
+    PATH: "/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin:{{ ansible_facts['env']['PATH'] }}"
+  loop:
+    - llvm
+    - gcc
+    - mise
+    - fastfetch
+  ignore_errors: yes

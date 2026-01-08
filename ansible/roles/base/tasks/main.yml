@@ -118,12 +118,12 @@
     - { regexp: "^#?PubkeyAuthentication", line: "PubkeyAuthentication yes" }
   notify: restart ssh
 
-- name: Allow password authentication for gia and antosakh users
+- name: Allow password authentication for antosakh user
   blockinfile:
     path: /etc/ssh/sshd_config
     marker: "# {mark} ANSIBLE MANAGED - password auth users"
     block: |
-      Match User gia,antosakh
+      Match User antosakh
           PasswordAuthentication yes
     insertafter: EOF
   notify: restart ssh
