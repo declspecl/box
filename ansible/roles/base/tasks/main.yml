@@ -161,6 +161,38 @@
     - gia
     - antosakh
 
+- name: Hide other users processes (hidepid)
+  lineinfile:
+    path: /etc/fstab
+    regexp: '^proc\s+/proc'
+    line: "proc /proc proc defaults,hidepid=2 0 0"
+    create: yes
+  notify: remount proc
+
+- name: Restrict access to cron for non-admin users
+  copy:
+    dest: /etc/cron.allow
+    content: |
+      dec
+    mode: "0644"
+
+- name: Restrict access to at for non-admin users
+  copy:
+    dest: /etc/at.allow
+    content: |
+      dec
+    mode: "0644"
+
+- name: Restrict access to sensitive directories
+  file:
+    path: "{{ item }}"
+    mode: "0750"
+  loop:
+    - /var/log
+    - /etc/ssh
+    - /opt/box
+  ignore_errors: yes
+
 - name: Ensure SSH is hardened
   lineinfile:
     path: /etc/ssh/sshd_config

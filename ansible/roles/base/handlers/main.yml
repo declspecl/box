@@ -13,3 +13,6 @@
   service:
     name: systemd-journald
     state: restarted
+
+- name: remount proc
+  command: mount -o remount /proc
