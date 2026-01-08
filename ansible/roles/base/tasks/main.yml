@@ -62,6 +62,9 @@
       - strace
       - sysstat
       - neovim
+      - talk
+      - talkd
+      - openbsd-inetd
     state: present
 
 - name: Configure passwordless sudo for ansible user
@@ -160,11 +163,23 @@
     - gia
     - antosakh
 
+- name: Create monitor group for process visibility
+  group:
+    name: monitor
+    system: yes
+    state: present
+
+- name: Add dec to monitor group
+  user:
+    name: dec
+    groups: monitor
+    append: yes
+
 - name: Hide other users processes (hidepid)
   lineinfile:
     path: /etc/fstab
     regexp: '^proc\s+/proc'
-    line: "proc /proc proc defaults,hidepid=1 0 0"
+    line: "proc /proc proc defaults,hidepid=1,gid=monitor 0 0"
     create: yes
   notify: remount proc
 
@@ -182,6 +197,24 @@
       dec
     mode: "0644"
 
+- name: Ensure write command has setgid tty
+  file:
+    path: /usr/bin/write
+    mode: "2755"
+    group: tty
+
+- name: Ensure wall command has setgid tty
+  file:
+    path: /usr/bin/wall
+    mode: "2755"
+    group: tty
+
+- name: Ensure talk command has setgid tty
+  file:
+    path: /usr/bin/talk
+    mode: "2755"
+    group: tty
+
 - name: Remove terminal multiplexers
   apt:
     name:
@@ -196,6 +229,12 @@
     regexp: "^#?KillUserProcesses"
     line: "KillUserProcesses=yes"
   notify: restart logind
+
+- name: Ensure inetd is running (for talkd)
+  service:
+    name: openbsd-inetd
+    state: started
+    enabled: yes
 
 - name: Restrict access to sensitive directories
   file:
