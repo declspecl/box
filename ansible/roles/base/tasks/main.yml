@@ -13,6 +13,32 @@
     state: present
     update_cache: yes
 
+- name: Install C/C++ development toolchain
+  apt:
+    name:
+      - gcc
+      - g++
+      - clang
+      - llvm
+      - cmake
+      - ninja-build
+      - make
+      - autoconf
+      - automake
+      - libtool
+      - pkg-config
+      - libomp-dev
+      - libtbb-dev
+      - libopenmpi-dev
+      - openmpi-bin
+      - gdb
+      - valgrind
+      - libboost-all-dev
+      - libeigen3-dev
+      - libopenblas-dev
+      - liblapack-dev
+    state: present
+
 - name: Configure passwordless sudo for ansible user
   copy:
     dest: /etc/sudoers.d/dec
