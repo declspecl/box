@@ -39,6 +39,32 @@
       - liblapack-dev
     state: present
 
+- name: Install utilities and dev tools
+  apt:
+    name:
+      - tmux
+      - htop
+      - tree
+      - ncdu
+      - jq
+      - fd-find
+      - silversearcher-ag
+      - wget
+      - httpie
+      - unzip
+      - zip
+      - p7zip-full
+      - rsync
+      - rename
+      - sqlite3
+      - redis-tools
+      - postgresql-client
+      - lsof
+      - strace
+      - sysstat
+      - neovim
+    state: present
+
 - name: Configure passwordless sudo for ansible user
   copy:
     dest: /etc/sudoers.d/dec
