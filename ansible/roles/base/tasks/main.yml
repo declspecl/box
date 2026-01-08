@@ -9,6 +9,7 @@
       - xz-utils
       - fail2ban
       - ufw
+      - acl
     state: present
     update_cache: yes
 
@@ -65,6 +66,11 @@
           create 0644 {{ box_user }} {{ box_user }}
       }
     mode: "0644"
+
+- name: Restrict /home directory listing
+  file:
+    path: /home
+    mode: "0711"
 
 - name: Create additional users
   user:
