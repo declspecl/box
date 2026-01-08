@@ -16,3 +16,8 @@
 
 - name: remount proc
   command: mount -o remount /proc
+
+- name: restart logind
+  service:
+    name: systemd-logind
+    state: restarted

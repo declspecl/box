@@ -42,7 +42,6 @@
 - name: Install utilities and dev tools
   apt:
     name:
-      - tmux
       - htop
       - tree
       - ncdu
@@ -165,7 +164,7 @@
   lineinfile:
     path: /etc/fstab
     regexp: '^proc\s+/proc'
-    line: "proc /proc proc defaults,hidepid=2 0 0"
+    line: "proc /proc proc defaults,hidepid=1 0 0"
     create: yes
   notify: remount proc
 
@@ -182,6 +181,21 @@
     content: |
       dec
     mode: "0644"
+
+- name: Remove terminal multiplexers
+  apt:
+    name:
+      - tmux
+      - screen
+      - byobu
+    state: absent
+
+- name: Kill user processes on logout (prevent lingering)
+  lineinfile:
+    path: /etc/systemd/logind.conf
+    regexp: "^#?KillUserProcesses"
+    line: "KillUserProcesses=yes"
+  notify: restart logind
 
 - name: Restrict access to sensitive directories
   file:
@@ -208,14 +222,11 @@
     - { regexp: "^#?PubkeyAuthentication", line: "PubkeyAuthentication yes" }
   notify: restart ssh
 
-- name: Allow password authentication for antosakh user
+- name: Remove password authentication block for users
   blockinfile:
     path: /etc/ssh/sshd_config
     marker: "# {mark} ANSIBLE MANAGED - password auth users"
-    block: |
-      Match User antosakh
-          PasswordAuthentication yes
-    insertafter: EOF
+    state: absent
   notify: restart ssh
 
 - name: Configure fail2ban SSH jail
