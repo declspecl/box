@@ -8,8 +8,100 @@
       - build-essential
       - xz-utils
       - fail2ban
+      - ufw
     state: present
     update_cache: yes
+
+- name: Configure passwordless sudo for ansible user
+  copy:
+    dest: /etc/sudoers.d/dec
+    content: "dec ALL=(ALL) NOPASSWD: ALL"
+    mode: "0440"
+    validate: "visudo -cf %s"
+
+- name: Ensure journald persistence directory exists
+  file:
+    path: /var/log/journal
+    state: directory
+    mode: "2755"
+  notify: restart journald
+
+- name: Ensure journald config directory exists
+  file:
+    path: /etc/systemd/journald.conf.d
+    state: directory
+    mode: "0755"
+
+- name: Configure journald for persistent logging
+  copy:
+    dest: /etc/systemd/journald.conf.d/persistence.conf
+    content: |
+      [Journal]
+      Storage=persistent
+      SystemMaxUse=500M
+      MaxRetentionSec=7day
+    mode: "0644"
+  notify: restart journald
+
+- name: Create box services log directory
+  file:
+    path: /var/log/box
+    state: directory
+    owner: "{{ box_user }}"
+    group: "{{ box_user }}"
+    mode: "0755"
+
+- name: Configure logrotate for box services
+  copy:
+    dest: /etc/logrotate.d/box
+    content: |
+      /var/log/box/*.log {
+          daily
+          rotate 7
+          compress
+          delaycompress
+          missingok
+          notifempty
+          create 0644 {{ box_user }} {{ box_user }}
+      }
+    mode: "0644"
+
+- name: Create additional users
+  user:
+    name: "{{ item }}"
+    shell: /bin/bash
+    create_home: yes
+    state: present
+  loop:
+    - gavin
+
+- name: Create gia user with password
+  user:
+    name: gia
+    shell: /bin/bash
+    create_home: yes
+    password: "{{ gia_password_hash }}"
+    state: present
+
+- name: Create antosakh user with password
+  user:
+    name: antosakh
+    shell: /bin/bash
+    create_home: yes
+    password: "{{ antosakh_password_hash }}"
+    state: present
+
+- name: Ensure .ssh directory exists for each user
+  file:
+    path: "/home/{{ item }}/.ssh"
+    state: directory
+    owner: "{{ item }}"
+    group: "{{ item }}"
+    mode: "0700"
+  loop:
+    - gavin
+    - gia
+    - antosakh
 
 - name: Ensure SSH is hardened
   lineinfile:
@@ -17,6 +109,7 @@
     regexp: "{{ item.regexp }}"
     line: "{{ item.line }}"
   with_items:
+    - { regexp: "^#?Port ", line: "Port 2222" }
     - { regexp: "^#?PasswordAuthentication", line: "PasswordAuthentication no" }
     - {
         regexp: "^#?PermitRootLogin",
@@ -25,13 +118,23 @@
     - { regexp: "^#?PubkeyAuthentication", line: "PubkeyAuthentication yes" }
   notify: restart ssh
 
+- name: Allow password authentication for gia and antosakh users
+  blockinfile:
+    path: /etc/ssh/sshd_config
+    marker: "# {mark} ANSIBLE MANAGED - password auth users"
+    block: |
+      Match User gia,antosakh
+          PasswordAuthentication yes
+    insertafter: EOF
+  notify: restart ssh
+
 - name: Configure fail2ban SSH jail
   copy:
     dest: /etc/fail2ban/jail.local
     content: |
       [sshd]
       enabled = true
-      port = ssh
+      port = 2222
       filter = sshd
       logpath = /var/log/auth.log
       maxretry = 3
@@ -45,3 +148,45 @@
     name: fail2ban
     state: started
     enabled: yes
+
+- name: Set UFW default policy to deny incoming
+  ufw:
+    direction: incoming
+    policy: deny
+
+- name: Set UFW default policy to allow outgoing
+  ufw:
+    direction: outgoing
+    policy: allow
+
+- name: Allow SSH on port 2222
+  ufw:
+    rule: allow
+    port: "2222"
+    proto: tcp
+    comment: "SSH"
+
+- name: Allow HTTP
+  ufw:
+    rule: allow
+    port: "80"
+    proto: tcp
+    comment: "HTTP"
+
+- name: Allow HTTPS
+  ufw:
+    rule: allow
+    port: "443"
+    proto: tcp
+    comment: "HTTPS"
+
+- name: Allow hello-world service
+  ufw:
+    rule: allow
+    port: "7777"
+    proto: tcp
+    comment: "hello-world"
+
+- name: Enable UFW
+  ufw:
+    state: enabled

@@ -1,0 +1,2 @@
+---
+box_user: "{{ ansible_user }}"

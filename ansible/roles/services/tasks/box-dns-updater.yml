@@ -1,4 +1,13 @@
 ---
+- name: Ensure box-dns-updater directory exists
+  file:
+    path: "{{ services_dir }}/box-dns-updater"
+    state: directory
+    owner: "{{ box_user }}"
+    group: "{{ box_user }}"
+    mode: "0755"
+  become: yes
+
 - name: Copy box-dns-updater service
   synchronize:
     src: "{{ role_path }}/../../../services/box-dns-updater/"
@@ -7,11 +16,18 @@
       - "--exclude=node_modules"
       - "--exclude=.env"
       - "--exclude=deno.lock"
+      - "--chown={{ box_user }}:{{ box_user }}"
+
+- name: Trust mise config for box-dns-updater
+  command: "{{ mise_install_dir }}/mise trust {{ services_dir }}/box-dns-updater/mise.toml"
+  become_user: "{{ box_user }}"
+  changed_when: false
 
 - name: Install box-dns-updater dependencies via mise
   command: "{{ mise_install_dir }}/mise install"
   args:
     chdir: "{{ services_dir }}/box-dns-updater"
+  become_user: "{{ box_user }}"
   changed_when: false
 
 - name: Create box-dns-updater environment file
@@ -42,6 +58,8 @@
       WorkingDirectory={{ services_dir }}/box-dns-updater
       ExecStart={{ mise_install_dir }}/mise exec -- deno task run
       EnvironmentFile={{ services_dir }}/box-dns-updater/.env
+      StandardOutput=append:/var/log/box/box-dns-updater.log
+      StandardError=append:/var/log/box/box-dns-updater.log
 
       [Install]
       WantedBy=multi-user.target

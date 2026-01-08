@@ -1,6 +1,6 @@
 import { serveDir } from "@std/http/file-server";
 
-const PORT = parseInt(Deno.env.get("PORT") || "8080");
+const PORT = parseInt(Deno.env.get("PORT") || "7777");
 
 Deno.serve({ port: PORT }, (req: Request) => {
     return serveDir(req, {
