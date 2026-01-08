@@ -9,4 +9,4 @@ if [ ! -f vars.yml ]; then
     exit 1
 fi
 
-ansible-playbook playbooks/deploy-services.yml -e @vars.yml
+ansible-playbook playbooks/deploy-services.yml
